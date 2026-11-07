@@ -1,0 +1,11 @@
+{
+  "name": "plateremix",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "predb": "node -e \"require('fs').mkdirSync('.local/mongodb', { recursive: true })\"",
+    "db": "mongod --dbpath .local/mongodb --bind_ip 127.0.0.1 --port 27017",
+    "server": "npm --prefix server run dev",
+    "dev": "npm --prefix client run dev"
+  }
+}
