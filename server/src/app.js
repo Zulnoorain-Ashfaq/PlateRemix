@@ -8,6 +8,32 @@ import mongoose from "mongoose";
 import { User, Recipe } from "./models.js";
 import { ingredients } from "./ingredients.js";
 import { validateRecipe, escapeSearch } from "./validation.js";
+import { calculateNutrition } from "./nutrition.js";
+
+function recipeContents(recipe, id) {
+  return {
+    id: String(id),
+    name: recipe.name,
+    instructions: recipe.instructions,
+    servings: recipe.servings,
+    ingredients: recipe.ingredients.map(({ ingredientId, grams }) => ({ ingredientId, grams }))
+  };
+}
+
+function addNutrition(contents) {
+  return { ...contents, nutrition: calculateNutrition(contents.ingredients, contents.servings) };
+}
+
+function serializeRecipe(recipe) {
+  const snapshot = recipe.originalSnapshot;
+  return {
+    ...addNutrition(recipeContents(recipe, recipe._id)),
+    originalId: recipe.originalId ? String(recipe.originalId) : null,
+    originalSnapshot: snapshot ? addNutrition(recipeContents(snapshot, snapshot.id)) : null,
+    createdAt: recipe.createdAt,
+    updatedAt: recipe.updatedAt
+  };
+}
 
 export function createApp({ jwtSecret, clientOrigin = "http://localhost:5173" }) {
   if (!jwtSecret || jwtSecret.length < 32) throw new Error("JWT_SECRET must contain at least 32 characters.");
@@ -47,29 +73,39 @@ export function createApp({ jwtSecret, clientOrigin = "http://localhost:5173" })
     try { const payload = jwt.verify(token, jwtSecret, { algorithms: ["HS256"] }); if (!mongoose.isValidObjectId(payload.sub)) throw new Error("Invalid user"); req.userId = payload.sub; return next(); }
     catch { return res.status(401).json({ error: "Session expired. Please sign in again." }); }
   });
-  const serialize = recipe => ({ id: String(recipe._id), name: recipe.name, instructions: recipe.instructions, servings: recipe.servings, ingredients: recipe.ingredients.map(({ ingredientId, grams }) => ({ ingredientId, grams })), createdAt: recipe.createdAt, updatedAt: recipe.updatedAt });
   app.get("/api/recipes", wrap(async (req, res) => {
     const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 120) : "";
     const query = { owner: req.userId };
     if (search) query.name = { $regex: escapeSearch(search), $options: "i" };
     const recipes = await Recipe.find(query).sort({ updatedAt: -1 }).limit(500);
-    return res.json({ recipes: recipes.map(serialize) });
+    return res.json({ recipes: recipes.map(serializeRecipe) });
   }));
   app.post("/api/recipes", wrap(async (req, res) => {
     let data; try { data = validateRecipe(req.body); } catch (e) { return res.status(400).json({ error: e.message }); }
+    const { originalId } = req.body;
+    if (originalId != null) {
+      if (typeof originalId !== "string" || !mongoose.isObjectIdOrHexString(originalId)) {
+        return res.status(400).json({ error: "Choose a valid original recipe." });
+      }
+      const original = await Recipe.findOne({ _id: originalId, owner: req.userId });
+      if (!original) return res.status(404).json({ error: "Original recipe not found." });
+      if (original.originalId) return res.status(400).json({ error: "Start a remix from an original recipe." });
+      data.originalId = originalId;
+      data.originalSnapshot = recipeContents(original, original._id);
+    }
     const recipe = await Recipe.create({ ...data, owner: req.userId });
-    return res.status(201).json({ recipe: serialize(recipe) });
+    return res.status(201).json({ recipe: serializeRecipe(recipe) });
   }));
   app.get("/api/recipes/:id", wrap(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: "Recipe not found." });
     const recipe = await Recipe.findOne({ _id: req.params.id, owner: req.userId });
-    return recipe ? res.json({ recipe: serialize(recipe) }) : res.status(404).json({ error: "Recipe not found." });
+    return recipe ? res.json({ recipe: serializeRecipe(recipe) }) : res.status(404).json({ error: "Recipe not found." });
   }));
   app.put("/api/recipes/:id", wrap(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: "Recipe not found." });
     let data; try { data = validateRecipe(req.body); } catch (e) { return res.status(400).json({ error: e.message }); }
     const recipe = await Recipe.findOneAndUpdate({ _id: req.params.id, owner: req.userId }, { $set: data }, { new: true, runValidators: true });
-    return recipe ? res.json({ recipe: serialize(recipe) }) : res.status(404).json({ error: "Recipe not found." });
+    return recipe ? res.json({ recipe: serializeRecipe(recipe) }) : res.status(404).json({ error: "Recipe not found." });
   }));
   app.delete("/api/recipes/:id", wrap(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: "Recipe not found." });

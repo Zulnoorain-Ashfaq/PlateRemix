@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { validateRecipe, escapeSearch } from "../src/validation.js";
 const sample = { name: "Bowl", instructions: "Cook", servings: 2, ingredients: [{ ingredientId: "rice-white-cooked", grams: 100 }] };
-test("valid recipes are normalized and do not admit future feature fields", () => {
-  const result = validateRecipe({ ...sample, name: " Bowl ", originalId: "not-used" });
+test("recipe validation normalizes input without admitting lineage fields", () => {
+  const result = validateRecipe({ ...sample, name: " Bowl ", originalId: "not-used", originalSnapshot: sample });
   assert.deepEqual(result, sample);
 });
 test("invalid servings, ingredient quantities, duplicates and unknown items are rejected", () => {
