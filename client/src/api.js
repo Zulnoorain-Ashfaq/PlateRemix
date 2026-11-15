@@ -14,6 +14,7 @@ export const api = {
   register: data => request('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   ingredients: () => request('/api/ingredients'),
   recipes: (token, search = '') => request(`/api/recipes?search=${encodeURIComponent(search)}`, { token }),
+  recipe: (token, id) => request(`/api/recipes/${encodeURIComponent(id)}`, { token }),
   save: (token, data, id) => request(`/api/recipes${id ? `/${encodeURIComponent(id)}` : ''}`, { token, method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }),
   remove: (token, id) => request(`/api/recipes/${encodeURIComponent(id)}`, { token, method: 'DELETE' }),
 }
