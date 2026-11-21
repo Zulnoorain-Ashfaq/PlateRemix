@@ -1,56 +1,36 @@
 # PlateRemix
 
-A recipe app built with React, Node.js, Express and MongoDB.
+PlateRemix is a recipe app built with React, Express, Node.js and MongoDB. Save recipes in your private library, make a remix and compare what changed. The app estimates calories, protein and fibre for the whole recipe and per serving using [USDA FoodData Central](https://fdc.nal.usda.gov/download-datasets/).
 
-## Features
-
-- Create an account and log in.
-- Add recipes with ingredients, quantities, servings and cooking instructions.
-- Search, edit and delete your saved recipes.
-- Keep your recipe library private.
-
-## Setup
+## Run it locally
 
 Install Node.js 20 or newer and MongoDB Community Server. Make sure `mongod` is on your PATH.
-
-Install the dependencies from the project folder:
 
 ```sh
 npm ci --prefix server
 npm ci --prefix client
 ```
 
-Copy `server/.env.example` to `server/.env`. Set `JWT_SECRET` to a random value of at least 32 characters. Keep this file private.
+Copy `server/.env.example` to `server/.env`. Set `JWT_SECRET` to a random value of at least 32 characters.
 
-## Run
-
-Open three terminals in the project folder and run one command in each:
+Run one command per terminal from the project folder:
 
 ```sh
 npm run db
-```
-
-```sh
 npm run server
-```
-
-```sh
 npm run dev
 ```
 
-Open http://localhost:5173. Keep the terminals running while using the app. Press Ctrl+C to stop them.
+Open [localhost:5173](http://localhost:5173). Sign up, save a recipe and click **Create a remix**. Change an ingredient to see the comparison update. You can save both versions and open them later from **My library**.
 
-MongoDB saves data in `.local/mongodb`. Restart the backend after changing its code.
-
-## Checks
+## Tests
 
 ```sh
 npm test --prefix server
 npm test --prefix client
-npm run build --prefix client
 ```
 
 ## Team
 
-- Zulnoorain Ashfaq: backend, account authentication, recipe storage and integration.
-- Ayesha Noor: React account screens, recipe builder, library and responsive interface.
+- Zulnoorain Ashfaq: API, MongoDB and nutrition calculations.
+- Ayesha Noor: recipe editor, comparison screen and library.
